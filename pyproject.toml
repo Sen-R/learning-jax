@@ -1,0 +1,32 @@
+[tool.pdm]
+[tool.pdm.dev-dependencies]
+dev = [
+    "black>=23.1.0",
+    "isort>=5.12.0",
+    "flake8>=5.0.4",
+    "mypy>=1.0.1",
+    "pytest>=7.2.1",
+    "ipykernel>=6.21.2",
+]
+
+[tool.pdm.scripts]
+lint = {composite = ["black --diff --check", "isort --diff", "flake8", "mypy"]}
+test = "pytest"
+all = {composite = ["lint", "test"]}
+
+[project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "Senthooran Rajamanoharan"},
+]
+dependencies = [
+    "jax[cpu]>=0.4.4",
+    "numpy>=1.24.2",
+    "matplotlib>=3.7.0",
+    "rich>=13.3.1",
+    "datasets>=2.10.1",
+]
+requires-python = ">=3.8"
+license = {text = "MIT"}
