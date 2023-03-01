@@ -10,8 +10,8 @@ dev = [
 ]
 
 [tool.pdm.scripts]
-lint = {composite = ["black --diff --check", "isort --diff", "flake8", "mypy"]}
-test = "pytest"
+lint = {composite = ["black --diff --check", "isort --diff", "flake8", "mypy --strict"]}
+test = "pytest -x"
 all = {composite = ["lint", "test"]}
 
 [project]
@@ -27,6 +27,7 @@ dependencies = [
     "matplotlib>=3.7.0",
     "rich>=13.3.1",
     "datasets>=2.10.1",
+    "chex>=0.1.6",
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -35,3 +36,6 @@ license = {text = "MIT"}
 [build-system]
 requires = ["pdm-pep517>=1.0"]
 build-backend = "pdm.pep517.api"
+
+[tool.pytest.ini_options]
+xfail_strict = true
