@@ -10,7 +10,7 @@ dev = [
 ]
 
 [tool.pdm.scripts]
-lint = {composite = ["black --diff --check", "isort --diff", "flake8", "mypy --strict"]}
+lint = {composite = ["black --diff --check", "isort --diff --check", "flake8", "mypy --strict"]}
 test = "pytest -x"
 all = {composite = ["lint", "test"]}
 
