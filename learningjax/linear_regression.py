@@ -19,6 +19,32 @@ class LinearModelParameters:
                 f"and {b_shape}"
             )
 
+    @classmethod
+    def initialize(
+        cls,
+        key_it: Iterator[chex.PRNGKey],
+        features_shape: Tuple[int, ...],
+        outputs_shape: Tuple[int, ...],
+    ) -> "LinearModelParameters":
+        if len(features_shape) > 1:
+            raise ValueError(
+                f"Features must be at most 1 dimensional, got: {features_shape}"
+            )
+        if len(outputs_shape) > 1:
+            raise ValueError(
+                f"Outputs must be at most 1 dimensional, got: {outputs_shape}"
+            )
+        if len(outputs_shape) > 0 and len(features_shape) == 0:
+            raise ValueError(
+                "When multiple outputs, cannot have scalar feature, "
+                f"got: {features_shape}"
+            )
+        w_shape = features_shape + outputs_shape
+        b_shape = outputs_shape
+        w = jax.random.normal(next(key_it), shape=w_shape)
+        b = jax.random.normal(next(key_it), shape=b_shape)
+        return cls(w=w, b=b)
+
 
 def linear_model(params: LinearModelParameters, features: chex.Array) -> chex.Array:
     return jnp.dot(features, params.w) + params.b  # type: ignore

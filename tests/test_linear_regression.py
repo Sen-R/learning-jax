@@ -35,6 +35,41 @@ class TestLinearModelParameters:
         with pytest.raises(ValueError):
             lr.LinearModelParameters(w=jnp.array([[1.0, 2.0]]), b=3.0)
 
+    @pytest.mark.parametrize(
+        "f_s,o_s,w_s,b_s",
+        (
+            ((), (), (), ()),
+            ((3,), (), (3,), ()),
+            ((3,), (2,), (3, 2), (2,)),
+        ),
+    )
+    def test_initialize(
+        self,
+        f_s: Tuple[int, ...],
+        o_s: Tuple[int, ...],
+        w_s: Tuple[int, ...],
+        b_s: Tuple[int, ...],
+    ) -> None:
+        key_it = repeat(jax.random.PRNGKey(2343))
+        params = lr.LinearModelParameters.initialize(key_it, f_s, o_s)
+        assert jnp.shape(params.w) == w_s
+        assert jnp.shape(params.b) == b_s
+
+    @pytest.mark.parametrize(
+        "f_s,o_s",
+        (
+            ((3, 2), ()),
+            ((3,), (4, 5)),
+            ((), (4,)),
+        ),
+    )
+    def test_bad_initialize_inputs(
+        self, f_s: Tuple[int, ...], o_s: Tuple[int, ...]
+    ) -> None:
+        key_it = repeat(jax.random.PRNGKey(2343))
+        with pytest.raises(ValueError):
+            lr.LinearModelParameters.initialize(key_it, f_s, o_s)
+
 
 class TestLinearModel:
     @pytest.mark.parametrize("w,b,x,y", [a + b for a, b in zip(params, x_y)])
