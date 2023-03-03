@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import optax  # type: ignore
 from absl import app, flags  # type: ignore
 from datasets import load_dataset  # type: ignore
-from tqdm import tqdm
+from rich import progress
 
 import learningjax.linear_regression as lr
 from learningjax import utils
@@ -85,11 +85,14 @@ def main(argv: List[str]) -> None:
         return params, opt_state
 
     print("Starting training...")
-    n_epochs: int = FLAGS.epochs
-    epochs_width = len(str(n_epochs))
+    epochs_width = len(str(FLAGS.epochs))
     for epoch in range(1, FLAGS.epochs + 1):
-        print(f"Epoch: {epoch:{epochs_width}d}/{FLAGS.epochs:{epochs_width}d}")
-        for batch in tqdm(ds["train"].iter(batch_size=FLAGS.batch_size)):
+        desc = f"Epoch {epoch:{epochs_width}d}/{FLAGS.epochs:{epochs_width}d}:"
+        for batch in progress.track(
+            ds["train"].iter(batch_size=FLAGS.batch_size, drop_last_batch=True),
+            description=desc,
+            total=len(ds["train"]) // FLAGS.batch_size,
+        ):
             params, opt_state = update(params, opt_state, batch)
         print(f"Accuracy: {accuracy(params, ds['test']):3.2%}")
 
