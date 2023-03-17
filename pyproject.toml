@@ -30,6 +30,7 @@ dependencies = [
     "chex>=0.1.6",
     "absl-py>=1.4.0",
     "optax>=0.1.4",
+    "dm-haiku>=0.0.9",
 ]
 readme = "README.md"
 requires-python = ">=3.8"

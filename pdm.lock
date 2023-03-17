@@ -190,6 +190,17 @@ requires_python = ">=3.7"
 summary = "serialize all of python"
 
 [[package]]
+name = "dm-haiku"
+version = "0.0.9"
+summary = "Haiku is a library for building neural networks in JAX."
+dependencies = [
+    "absl-py>=0.7.1",
+    "jmp>=0.0.2",
+    "numpy>=1.18.0",
+    "tabulate>=0.8.9",
+]
+
+[[package]]
 name = "dm-tree"
 version = "0.1.8"
 summary = "Tree is a library for working with nested data structures."
@@ -382,6 +393,14 @@ requires_python = ">=3.6"
 summary = "An autocompletion tool for Python that can be used for text editors."
 dependencies = [
     "parso<0.9.0,>=0.8.0",
+]
+
+[[package]]
+name = "jmp"
+version = "0.0.4"
+summary = "JMP is a Mixed Precision library for JAX."
+dependencies = [
+    "numpy>=1.19.5",
 ]
 
 [[package]]
@@ -764,6 +783,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tabulate"
+version = "0.9.0"
+requires_python = ">=3.7"
+summary = "Pretty-print tabular data"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 requires_python = ">=3.7"
@@ -837,7 +862,7 @@ summary = "Backport of pathlib-compatible object wrapper for zip files"
 
 [metadata]
 lock_version = "4.1"
-content_hash = "sha256:3c135cff4bb0221d23aa570547d43f5d210e76cbda1b48eb3e26e50353e0a009"
+content_hash = "sha256:16eebb460f36fe89d88605236a8a69be30c114bcb654c668d05b054ca31d1e54"
 
 [metadata.files]
 "absl-py 1.4.0" = [
@@ -1252,6 +1277,10 @@ content_hash = "sha256:3c135cff4bb0221d23aa570547d43f5d210e76cbda1b48eb3e26e5035
     {url = "https://files.pythonhosted.org/packages/7c/e7/364a09134e1062d4d5ff69b853a56cf61c223e0afcc6906b6832bcd51ea8/dill-0.3.6.tar.gz", hash = "sha256:e5db55f3687856d8fbdab002ed78544e1c4559a130302693d839dfe8f93f2373"},
     {url = "https://files.pythonhosted.org/packages/be/e3/a84bf2e561beed15813080d693b4b27573262433fced9c1d1fea59e60553/dill-0.3.6-py3-none-any.whl", hash = "sha256:a07ffd2351b8c678dfc4a856a3005f8067aea51d6ba6c700796a4d9e280f39f0"},
 ]
+"dm-haiku 0.0.9" = [
+    {url = "https://files.pythonhosted.org/packages/a8/f8/e8288aca6cfcca1483cd2dcec341dbf9774dfe52ceb71ae2c594c538a769/dm-haiku-0.0.9.tar.gz", hash = "sha256:97752b32cdbe5a3e2d1c60ea884d33eb4b36e7d410000f0d61b571417c925435"},
+    {url = "https://files.pythonhosted.org/packages/d4/fb/f907d8e25b7be38dafa6ad677894397e6e12d90f62dbae40123bd91347be/dm_haiku-0.0.9-py3-none-any.whl", hash = "sha256:f057ee8af4ef08499d0381e8f0733525ace1d099f24c5adb700fdcfaab7b03ca"},
+]
 "dm-tree 0.1.8" = [
     {url = "https://files.pythonhosted.org/packages/01/80/bc11fe596b6be71211b154d45db2a3bbef4e1875957c3d757e6d4e35a839/dm_tree-0.1.8-cp39-cp39-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:28c52cbf4f8b3dbd0beaedf44f69fa85eec5e9dede612e08035e06ada6ec9426"},
     {url = "https://files.pythonhosted.org/packages/08/e2/4c29cb9876456517f21979ddcbb6048f28a3b52c61aa9d14d42adafcdca4/dm_tree-0.1.8-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:378cc8ad93c5fe3590f405a309980721f021c790ca1bdf9b15bb1d59daec57f5"},
@@ -1445,6 +1474,10 @@ content_hash = "sha256:3c135cff4bb0221d23aa570547d43f5d210e76cbda1b48eb3e26e5035
 "jedi 0.18.2" = [
     {url = "https://files.pythonhosted.org/packages/15/02/afd43c5066de05f6b3188f3aa74136a3289e6c30e7a45f351546cab0928c/jedi-0.18.2.tar.gz", hash = "sha256:bae794c30d07f6d910d32a7048af09b5a39ed740918da923c6b780790ebac612"},
     {url = "https://files.pythonhosted.org/packages/6d/60/4acda63286ef6023515eb914543ba36496b8929cb7af49ecce63afde09c6/jedi-0.18.2-py2.py3-none-any.whl", hash = "sha256:203c1fd9d969ab8f2119ec0a3342e0b49910045abe6af0a3ae83a5764d54639e"},
+]
+"jmp 0.0.4" = [
+    {url = "https://files.pythonhosted.org/packages/27/e5/cce82de2831e5aff9332d8d624bb57188f1b2af6ccf6979caf898a8a4348/jmp-0.0.4-py3-none-any.whl", hash = "sha256:6aa7adbddf2bd574b28c7faf6e81a735eb11f53386447896909c6968dc36807d"},
+    {url = "https://files.pythonhosted.org/packages/ab/b0/e90fbbffef4b345329c878a69f0336d3edc5a1f9fcba193931aca2132d62/jmp-0.0.4.tar.gz", hash = "sha256:5dfeb0fd7c7a9f72a70fff0aab9d0cbfae32a809c02f4037ff3485ceb33e1730"},
 ]
 "jupyter-client 8.0.3" = [
     {url = "https://files.pythonhosted.org/packages/2a/82/3bb00614ba16b4df15896119a34bc6c9b4838cc3fc4e5a09157ca6ee3985/jupyter_client-8.0.3.tar.gz", hash = "sha256:ed65498bea6d876ef9d8da3e0db3dd33c5d129f5b2645f56ae03993782966bd0"},
@@ -2151,6 +2184,10 @@ content_hash = "sha256:3c135cff4bb0221d23aa570547d43f5d210e76cbda1b48eb3e26e5035
 "stack-data 0.6.2" = [
     {url = "https://files.pythonhosted.org/packages/6a/81/aa96c25c27f78cdc444fec27d80f4c05194c591465e491a1358d8a035bc1/stack_data-0.6.2-py3-none-any.whl", hash = "sha256:cbb2a53eb64e5785878201a97ed7c7b94883f48b87bfb0bbe8b623c74679e4a8"},
     {url = "https://files.pythonhosted.org/packages/db/18/aa7f2b111aeba2cd83503254d9133a912d7f61f459a0c8561858f0d72a56/stack_data-0.6.2.tar.gz", hash = "sha256:32d2dd0376772d01b6cb9fc996f3c8b57a357089dec328ed4b6553d037eaf815"},
+]
+"tabulate 0.9.0" = [
+    {url = "https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
+    {url = "https://files.pythonhosted.org/packages/ec/fe/802052aecb21e3797b8f7902564ab6ea0d60ff8ca23952079064155d1ae1/tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c"},
 ]
 "tomli 2.0.1" = [
     {url = "https://files.pythonhosted.org/packages/97/75/10a9ebee3fd790d20926a90a2547f0bf78f371b2f13aa822c759680ca7b9/tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
