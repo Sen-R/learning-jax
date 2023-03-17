@@ -1,6 +1,5 @@
 import chex
 import jax
-
 import learningjax.linear_regression as lr
 from learningjax.losses import mse
 from learningjax.optimize import sgd

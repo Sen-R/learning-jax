@@ -3,13 +3,12 @@ from typing import Dict, Iterator, List, Tuple
 import chex
 import jax
 import jax.numpy as jnp
+import learningjax.linear_regression as lr
 import optax  # type: ignore
 from absl import app, flags  # type: ignore
 from datasets import load_dataset  # type: ignore
-from rich import progress
-
-import learningjax.linear_regression as lr
 from learningjax import utils
+from rich import progress
 
 FLAGS = flags.FLAGS
 
