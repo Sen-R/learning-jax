@@ -11,7 +11,7 @@ dev = [
 ]
 
 [tool.pdm.scripts]
-lint = {composite = ["black --diff --check", "isort --diff --check", "flake8", "mypy --strict"]}
+lint = {composite = ["black --diff --check", "isort --diff --check", "flake8", "mypy", "pytype"]}
 test = "pytest -x"
 all = {composite = ["lint", "test"]}
 
@@ -32,6 +32,9 @@ dependencies = [
     "absl-py>=1.4.0",
     "optax>=0.1.4",
     "dm-haiku>=0.0.9",
+    "transformers>=4.27.1",
+    "tensorflow>=2.11.0",
+    "tensorflow-datasets>=4.8.3",
 ]
 readme = "README.md"
 requires-python = ">=3.8,<3.11"
@@ -47,3 +50,6 @@ xfail_strict = true
 [tool.isort]
 profile = "black"
 skip = [".pytype", ".venv"]
+
+[tool.mypy]
+disallow_untyped_defs = true
