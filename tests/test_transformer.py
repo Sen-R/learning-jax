@@ -8,6 +8,7 @@ from learningjax.transformer import (
     MHA,
     MultiHeadLinear,
     TransformerLayer,
+    build_transformer,
     compute_attention_matrix,
     multi_head_attention,
 )
@@ -76,3 +77,19 @@ class TestTransformerLayer:
         params = layer.init(p_key, x)
         out = layer.apply(params, a_key, x)
         chex.assert_equal_shape((x, out))
+
+
+class TestTransformer:
+    def test_output_shape(self) -> None:
+        vocab_size = 3
+        context_size = 12
+        embed_dim = 8
+        num_layers = 1
+        num_heads = 2
+        transformer = build_transformer(
+            vocab_size, context_size, embed_dim, num_layers, num_heads
+        )
+        x = jnp.array([[0, 1, 2, 0, 1, 2], [0, 0, 1, 1, 2, 2]])
+        params = transformer.init(jax.random.PRNGKey(42), x)
+        logits = transformer.apply(params, jax.random.PRNGKey(42), x)
+        chex.assert_shape(logits, (2, 6, 3))
