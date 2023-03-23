@@ -2,6 +2,7 @@ import chex
 import haiku as hk
 import jax
 import jax.numpy as jnp
+import pytest
 
 from learningjax.transformer import (
     FFN,
@@ -80,16 +81,23 @@ class TestTransformerLayer:
 
 
 class TestTransformer:
-    def test_output_shape(self) -> None:
+    transformer: hk.Transformed
+    params: hk.Params
+    x: jax.Array
+
+    @pytest.fixture(autouse=True)
+    def _setup(self) -> None:
         vocab_size = 3
         context_size = 12
         embed_dim = 8
         num_layers = 1
         num_heads = 2
-        transformer = build_transformer(
+        self.transformer = build_transformer(
             vocab_size, context_size, embed_dim, num_layers, num_heads
         )
-        x = jnp.array([[0, 1, 2, 0, 1, 2], [0, 0, 1, 1, 2, 2]])
-        params = transformer.init(jax.random.PRNGKey(42), x)
-        logits = transformer.apply(params, jax.random.PRNGKey(42), x)
+        self.x = jnp.array([[0, 1, 2, 0, 1, 2], [0, 0, 1, 1, 2, 2]])
+        self.params = self.transformer.init(jax.random.PRNGKey(42), self.x)
+
+    def test_output_shape(self) -> None:
+        logits = self.transformer.apply(self.params, jax.random.PRNGKey(42), self.x)
         chex.assert_shape(logits, (2, 6, 3))

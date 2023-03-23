@@ -149,8 +149,12 @@ def build_transformer(
     @hk.transform
     def forward(x: jax.Array, mask: Optional[jax.Array] = None) -> jax.Array:
         embed_init = hk.initializers.VarianceScaling(mode="fan_out")
-        wte = hk.get_parameter("wte", shape=(vocab_size, embed_dim), init=embed_init)
-        wpe = hk.get_parameter("tpe", shape=(context_size, embed_dim), init=embed_init)
+        with hk.experimental.name_scope("token_embedding"):
+            wte = hk.get_parameter("w", shape=(vocab_size, embed_dim), init=embed_init)
+        with hk.experimental.name_scope("position_embedding"):
+            wpe = hk.get_parameter(
+                "w", shape=(context_size, embed_dim), init=embed_init
+            )
         ln_final = hk.LayerNorm(-1, True, True, name="ln_final")
         layers = [
             TransformerLayer(num_heads, name=f"layer_{i}") for i in range(num_layers)
