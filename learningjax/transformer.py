@@ -1,10 +1,12 @@
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import chex
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+Mask = Union[jax.Array, np.ndarray]
 
 
 class FFN(hk.Module):
@@ -62,7 +64,7 @@ class MultiHeadLinear(hk.Module):
 
 
 def compute_attention_matrix(
-    query: jax.Array, key: jax.Array, mask: Optional[jax.Array] = None
+    query: jax.Array, key: jax.Array, mask: Optional[Mask] = None
 ) -> jax.Array:
     sqrt_d_k = np.sqrt(key.shape[-1])
     attention_logits = jnp.einsum("...shf,...Shf->...hsS", query, key) / sqrt_d_k
@@ -72,7 +74,7 @@ def compute_attention_matrix(
 
 
 def multi_head_attention(
-    query: jax.Array, key: jax.Array, value: jax.Array, mask: Optional[jax.Array] = None
+    query: jax.Array, key: jax.Array, value: jax.Array, mask: Optional[Mask] = None
 ) -> jax.Array:
     attention_matrix = compute_attention_matrix(query, key, mask)
     return jnp.einsum("...hsS,...Shf->...shf", attention_matrix, value)
@@ -91,7 +93,7 @@ class MHA(hk.Module):
         self.num_heads = num_heads
         self.w_init = w_init or hk.initializers.VarianceScaling()
 
-    def __call__(self, x: jax.Array, mask: Optional[jax.Array] = None) -> jax.Array:
+    def __call__(self, x: jax.Array, mask: Optional[Mask] = None) -> jax.Array:
         *leading_dims, seq_len, d_model = x.shape
 
         # Create query, key and value sequences
@@ -102,7 +104,7 @@ class MHA(hk.Module):
         ]
 
         # Compute attention and project combined outputs back to original vector space
-        attended_value = multi_head_attention(query, key, value)
+        attended_value = multi_head_attention(query, key, value, mask)
         concatenated = attended_value.reshape(
             (*leading_dims, seq_len, self.num_heads * key_size)
         )
@@ -128,7 +130,7 @@ class TransformerLayer(hk.Module):
         self.dropout_rate = dropout_rate
         self.w_init = w_init
 
-    def __call__(self, x: jax.Array, mask: Optional[jax.Array] = None) -> jax.Array:
+    def __call__(self, x: jax.Array, mask: Optional[Mask] = None) -> jax.Array:
         ln_0 = hk.LayerNorm(-1, True, True, name="ln_pre_mha")
         ln_1 = hk.LayerNorm(-1, True, True, name="ln_pre_ffn")
         mha = MHA(self.num_heads, self.w_init, name="mha")
@@ -143,11 +145,31 @@ class TransformerLayer(hk.Module):
         return x
 
 
-def build_transformer(
+def _causal_mask(dest_len: int, src_len: int) -> np.ndarray:
+    """Returns a causal attention mask.
+
+    Returns a numpy array as this should be statically determined from input shapes.
+    """
+    return np.tril(np.ones((dest_len, src_len)), k=src_len - dest_len).astype(np.int32)
+
+
+def _build_mask(x: jax.Array, mask: Optional[jax.Array] = None) -> Mask:
+    *leading_dims, seq_len = x.shape
+    full_mask = _causal_mask(seq_len, seq_len)
+    if mask is None:
+        return full_mask
+    else:
+        return full_mask * mask.reshape((*leading_dims, 1, seq_len))
+
+
+def build_causal_transformer(
     vocab_size: int, context_size: int, embed_dim: int, num_layers: int, num_heads: int
 ) -> hk.Transformed:
     @hk.transform
-    def forward(x: jax.Array, mask: Optional[jax.Array] = None) -> jax.Array:
+    def forward(
+        x: jax.Array, mask: Optional[jax.Array] = None
+    ) -> Tuple[jax.Array, Optional[jax.Array]]:
+        # Initialize layers
         embed_init = hk.initializers.VarianceScaling(mode="fan_out")
         with hk.experimental.name_scope("token_embedding"):
             wte = hk.get_parameter("w", shape=(vocab_size, embed_dim), init=embed_init)
@@ -159,15 +181,23 @@ def build_transformer(
         layers = [
             TransformerLayer(num_heads, name=f"layer_{i}") for i in range(num_layers)
         ]
+
+        # Setup causal mask (plus optional attention masking)
+        full_mask = _build_mask(x, mask)
+
+        # Compute logits
         chex.assert_type(x, jnp.int32)
-        assert x.shape[-1] <= context_size
+        if x.shape[-1] > context_size:
+            raise ValueError(
+                f"Got sequence length {x.shape[-1]} when context size is {context_size}"
+            )
         token_embeddings = wte[(x,)]
         position_embeddings = wpe[: x.shape[-1]]
         z = token_embeddings + position_embeddings
         for layer in layers:
-            z = layer(z, mask)
+            z = layer(z, full_mask)
         z = ln_final(z)
         logits = jnp.dot(z, wte.T)
-        return logits
+        return logits, mask
 
     return forward

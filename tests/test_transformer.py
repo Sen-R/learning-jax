@@ -1,3 +1,5 @@
+from typing import List
+
 import chex
 import haiku as hk
 import jax
@@ -9,7 +11,9 @@ from learningjax.transformer import (
     MHA,
     MultiHeadLinear,
     TransformerLayer,
-    build_transformer,
+    _build_mask,
+    _causal_mask,
+    build_causal_transformer,
     compute_attention_matrix,
     multi_head_attention,
 )
@@ -80,7 +84,17 @@ class TestTransformerLayer:
         chex.assert_equal_shape((x, out))
 
 
-class TestTransformer:
+class TestCausalMask:
+    @pytest.mark.parametrize(
+        "nd,ns,expected",
+        [(2, 2, [[1, 0], [1, 1]]), (2, 3, [[1, 1, 0], [1, 1, 1]])],
+    )
+    def test_outputs(self, nd: int, ns: int, expected: List[List[int]]) -> None:
+        got = _causal_mask(nd, ns)
+        chex.assert_trees_all_equal(got, jnp.array(expected))
+
+
+class TestCausalTransformer:
     transformer: hk.Transformed
     params: hk.Params
     x: jax.Array
@@ -92,12 +106,32 @@ class TestTransformer:
         embed_dim = 8
         num_layers = 1
         num_heads = 2
-        self.transformer = build_transformer(
+        self.transformer = build_causal_transformer(
             vocab_size, context_size, embed_dim, num_layers, num_heads
         )
         self.x = jnp.array([[0, 1, 2, 0, 1, 2], [0, 0, 1, 1, 2, 2]])
         self.params = self.transformer.init(jax.random.PRNGKey(42), self.x)
+        self.mask = jnp.array([[1, 1, 1, 1, 1, 1], [1, 1, 1, 0, 0, 0]])  # arbitrary
 
-    def test_output_shape(self) -> None:
-        logits = self.transformer.apply(self.params, jax.random.PRNGKey(42), self.x)
+    @pytest.mark.parametrize("use_mask", [True, False])
+    def test_output_shape_without_mask(self, use_mask: bool) -> None:
+        mask_in = self.mask if use_mask else None
+        logits, mask_out = self.transformer.apply(
+            self.params, jax.random.PRNGKey(42), self.x, mask_in
+        )
         chex.assert_shape(logits, (2, 6, 3))
+        if use_mask:
+            chex.assert_trees_all_equal(mask_out, mask_in)
+        else:
+            assert mask_out is None
+
+    def test_build_mask(self) -> None:
+        x = jnp.array([[0, 1, 2], [0, 1, 2]])
+        mask = jnp.array([[1, 1, 0], [1, 0, 0]])
+        expected = jnp.array(
+            [
+                [[1, 0, 0], [1, 1, 0], [1, 1, 0]],
+                [[1, 0, 0], [1, 0, 0], [1, 0, 0]],
+            ]
+        )
+        chex.assert_trees_all_equal(_build_mask(x, mask), expected)
