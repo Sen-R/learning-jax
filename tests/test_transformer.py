@@ -116,14 +116,14 @@ class TestCausalTransformer:
     @pytest.mark.parametrize("use_mask", [True, False])
     def test_output_shape_without_mask(self, use_mask: bool) -> None:
         mask_in = self.mask if use_mask else None
-        logits, mask_out = self.transformer.apply(
+        output = self.transformer.apply(
             self.params, jax.random.PRNGKey(42), self.x, mask_in
         )
-        chex.assert_shape(logits, (2, 6, 3))
+        chex.assert_shape(output["logits"], (2, 6, 3))
         if use_mask:
-            chex.assert_trees_all_equal(mask_out, mask_in)
+            chex.assert_trees_all_equal(output["attention_mask"], mask_in)
         else:
-            assert mask_out is None
+            assert "attention_mask" not in output.keys()
 
     def test_build_mask(self) -> None:
         x = jnp.array([[0, 1, 2], [0, 1, 2]])

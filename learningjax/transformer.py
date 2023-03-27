@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Dict, Optional, Union
 
 import chex
 import haiku as hk
@@ -166,9 +166,7 @@ def build_causal_transformer(
     vocab_size: int, context_size: int, embed_dim: int, num_layers: int, num_heads: int
 ) -> hk.Transformed:
     @hk.transform
-    def forward(
-        x: jax.Array, mask: Optional[jax.Array] = None
-    ) -> Tuple[jax.Array, Optional[jax.Array]]:
+    def forward(x: jax.Array, mask: Optional[jax.Array] = None) -> Dict[str, jax.Array]:
         # Initialize layers
         embed_init = hk.initializers.VarianceScaling(mode="fan_out")
         with hk.experimental.name_scope("token_embedding"):
@@ -198,6 +196,9 @@ def build_causal_transformer(
             z = layer(z, full_mask)
         z = ln_final(z)
         logits = jnp.dot(z, wte.T)
-        return logits, mask
+        if mask is None:
+            return {"logits": logits}
+        else:
+            return {"logits": logits, "attention_mask": mask}
 
     return forward
