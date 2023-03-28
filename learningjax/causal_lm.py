@@ -11,10 +11,10 @@ Params = Dict[str, Dict[str, jax.Array]]  # standard Haiku params type
 ApplyFn = Callable[
     [Params, Optional[jax.random.KeyArray], jax.Array], Dict[str, jax.Array]
 ]
-LossFn = Callable[[Params, Optional[jax.random.KeyArray], jax.Array], jax.Array]
-MetricFn = Callable[
+LossFn = Callable[
     [Params, Optional[jax.random.KeyArray], jax.Array], Tuple[jax.Array, jax.Array]
 ]
+MetricFn = LossFn  # same signature, at least for time being
 
 
 def _unreduced_weighted_loss(
@@ -53,11 +53,13 @@ def build_metric_fn(model: ApplyFn, pad_token_id: int) -> MetricFn:
 def build_loss_fn(model: ApplyFn, pad_token_id: int) -> LossFn:
     def compute_loss(
         params: Params, key: Optional[jax.random.KeyArray], batch: jax.Array
-    ) -> jax.Array:
+    ) -> Tuple[jax.Array, jax.Array]:
         x_ents, sample_weights = _unreduced_weighted_loss(
             params, key, batch, model, pad_token_id
         )
-        return jnp.sum(x_ents) / jnp.sum(sample_weights)
+        total_xents = jnp.sum(x_ents)
+        total_weight = jnp.sum(sample_weights)
+        return total_xents / total_weight, total_weight
 
     return compute_loss
 
@@ -102,8 +104,11 @@ def evaluate(
         this_loss, this_weights = compute_metric(params, subkey, processed)
         total_loss = total_loss + this_loss
         total_weights = total_weights + this_weights
-        loss_so_far = jnp.sum(total_loss) / jnp.sum(total_weights)
-        p_bar.set_description(f"Loss - {loss_so_far:.4f}")
+        tokens_so_far = jnp.sum(total_weights)
+        loss_so_far = jnp.sum(total_loss) / tokens_so_far
+        p_bar.set_description(
+            f"Loss - {loss_so_far:.4f} | Tokens - {int(tokens_so_far):,d}"
+        )
     return total_loss / total_weights, total_weights
 
 
@@ -118,7 +123,10 @@ def train(
     key: jax.random.KeyArray,
     max_length: int,
     pad_token_id: int,
+    *,
     steps_per_epoch: Optional[int] = None,
+    val_dataset: Optional[Dataset] = None,
+    val_batch_size: Optional[int] = None,
 ) -> Tuple[Params, optax.OptState]:
     loss_fn = build_loss_fn(model, pad_token_id)
 
@@ -128,26 +136,52 @@ def train(
         opt_state: optax.OptState,
         key: jax.random.KeyArray,
         batch: jax.Array,
-    ) -> Tuple[Params, optax.OptState, jax.Array]:
-        loss, grads = jax.value_and_grad(loss_fn)(params, key, batch)
+    ) -> Tuple[Params, optax.OptState, jax.Array, jax.Array]:
+        (loss, batch_weight), grads = jax.value_and_grad(loss_fn, has_aux=True)(
+            params, key, batch
+        )
         updates, opt_state = optimizer.update(grads, opt_state, params)
         params = optax.apply_updates(params, updates)
-        return params, opt_state, loss
+        return params, opt_state, loss, batch_weight
 
     num_batches = len(dataset) // batch_size
     steps_per_epoch = num_batches if steps_per_epoch is None else steps_per_epoch
     for epoch in range(epochs):
         print(f"Epoch {epoch:{len(str(epochs))}d}/{epochs}")
+        print("Training...")
         p_bar = tqdm(
             dataset.iter(batch_size=batch_size, drop_last_batch=True),
             total=steps_per_epoch,
             desc="Starting",
         )
+        total_loss = 0.0
+        total_weight = 0.0
         for step_no, batch in enumerate(p_bar):
             if step_no == steps_per_epoch:
                 break
             processed = pad_and_convert_batch(batch, max_length, pad_token_id)
             key, subkey = jax.random.split(key)
-            params, opt_state, this_loss = update(params, opt_state, subkey, processed)
-            p_bar.set_description(f"Loss - {this_loss:.4f}")
+            params, opt_state, this_loss, this_weight = update(
+                params, opt_state, subkey, processed
+            )
+            total_loss += this_loss
+            total_weight += this_weight
+            loss_so_far = total_loss / total_weight
+            p_bar.set_description(
+                f"Loss - {loss_so_far:.4f} | Tokens - {int(total_weight):,d}"
+            )
+        key, val_subkey = jax.random.split(key)
+        if val_dataset is not None:
+            val_batch_size = val_batch_size or batch_size
+            print("Validating...")
+            evaluate(
+                params,
+                model,
+                val_dataset,
+                val_batch_size,
+                val_subkey,
+                max_length,
+                pad_token_id,
+            )
+
     return params, opt_state

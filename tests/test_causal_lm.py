@@ -45,5 +45,5 @@ def test_build_loss_fn() -> None:
         lambda _, __, ___: dummy_model_output, pad_token_id=pad_token_id
     )
     got = jax.jit(compute_loss)({}, None, batch)
-    expected = jnp.log(vocab_size)
+    expected = (jnp.log(vocab_size), 5.0)
     chex.assert_tree_all_close(got, expected)
