@@ -24,7 +24,7 @@ def _unreduced_weighted_loss(
     model: ApplyFn,
     pad_token_id: int,
 ) -> Tuple[jax.Array, jax.Array]:
-    inputs, labels = batch[:, :-1], batch[:, 1:]
+    inputs, labels = batch["input_ids"], batch["labels"]
     sample_weights = inputs != pad_token_id
     logits = model(params, key, inputs)["logits"]
     xents = (
@@ -64,11 +64,13 @@ def build_loss_fn(model: ApplyFn, pad_token_id: int) -> LossFn:
 
 def pad_and_convert_batch(
     batch: Dict[str, List[List[int]]], max_length: int, pad_token_id: int
-) -> jax.Array:
-    out = pad_token_id * np.ones((len(batch["input_ids"]), max_length), dtype=np.int32)
+) -> Dict[str, jax.Array]:
+    tot_length = max_length + 1
+    full = pad_token_id * np.ones((len(batch["input_ids"]), tot_length), dtype=np.int32)
     for i, row in enumerate(batch["input_ids"]):
-        out[i, : min(max_length, len(row))] = row[:max_length]
-    return jax.device_put(out)
+        full[i, : min(tot_length, len(row))] = row[:tot_length]
+    full_on_device = jax.device_put(full)
+    return {"input_ids": full_on_device[..., :-1], "labels": full_on_device[..., 1:]}
 
 
 def evaluate(
@@ -82,8 +84,8 @@ def evaluate(
     max_steps: Optional[int] = None,
 ) -> Tuple[jax.Array, jax.Array]:
     """Evaluate logits model on cross entropy loss."""
-    total_loss = jnp.zeros((max_length - 1,))
-    total_weights = jnp.zeros((max_length - 1,))
+    total_loss = jnp.zeros((max_length,))
+    total_weights = jnp.zeros((max_length,))
     compute_metric = jax.jit(build_metric_fn(model, pad_token_id))
     num_batches = len(dataset) // batch_size
     max_steps = num_batches if max_steps is None else max_steps
