@@ -146,7 +146,7 @@ def train(
 
     num_batches = len(dataset) // batch_size
     steps_per_epoch = num_batches if steps_per_epoch is None else steps_per_epoch
-    for epoch in range(epochs):
+    for epoch in range(1, epochs + 1):
         print(f"Epoch {epoch:{len(str(epochs))}d}/{epochs}")
         print("Training...")
         p_bar = tqdm(
