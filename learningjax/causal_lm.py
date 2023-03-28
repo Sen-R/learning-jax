@@ -161,10 +161,10 @@ def train(
                 break
             processed = pad_and_convert_batch(batch, max_length, pad_token_id)
             key, subkey = jax.random.split(key)
-            params, opt_state, this_loss, this_weight = update(
+            params, opt_state, mean_loss, this_weight = update(
                 params, opt_state, subkey, processed
             )
-            total_loss += this_loss
+            total_loss += mean_loss * this_weight
             total_weight += this_weight
             loss_so_far = total_loss / total_weight
             p_bar.set_description(
@@ -183,5 +183,6 @@ def train(
                 max_length,
                 pad_token_id,
             )
+        print()
 
     return params, opt_state
