@@ -148,7 +148,7 @@ def main(argv: List[str]) -> None:
     )
 
 
-if __name__ == "__main__":
+def cli() -> None:
     try:
         app.run(main)
     except KeyboardInterrupt:

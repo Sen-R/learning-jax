@@ -40,6 +40,9 @@ readme = "README.md"
 requires-python = ">=3.8,<3.11"
 license = {text = "MIT"}
 
+[project.scripts]
+train_clm = "learningjax._cli.train_clm:cli"
+
 [build-system]
 requires = ["pdm-pep517>=1.0"]
 build-backend = "pdm.pep517.api"
