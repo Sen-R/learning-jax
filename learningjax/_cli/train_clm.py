@@ -133,7 +133,7 @@ def main(argv: List[str]) -> None:
     for module, shapes_dict in module_to_shapes_dict.items():
         print(f"{module}: {shapes_dict}")
     print()
-    num_params = jax.tree_util.tree_reduce(lambda c, l: jnp.size(l), params, 0)
+    num_params = jax.tree_util.tree_reduce(lambda c, l: c + jnp.size(l), params, 0)
     print(f"Total parameters: {num_params:,d}")
     print()
 
