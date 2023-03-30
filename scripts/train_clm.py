@@ -1,7 +1,7 @@
 import logging
 import os
 from functools import partial
-from typing import Any, Dict, List
+from typing import Dict, List, Protocol
 
 import haiku as hk
 import jax
@@ -11,7 +11,7 @@ from absl import app, flags  # type: ignore
 from datasets import DatasetDict, load_dataset  # type: ignore
 from transformers import AutoTokenizer, GPT2TokenizerFast  # type: ignore
 
-from learningjax import causal_lm
+from learningjax import causal_lm, transformer
 
 log_level = os.getenv("LOGLEVEL", logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -20,11 +20,15 @@ logging.getLogger("jax").setLevel(log_level)
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer("max_length", 1024, "Max length of sequences.", lower_bound=0)
-flags.DEFINE_float("learning_rate", 0.1, "Adam learning rate.")
+flags.DEFINE_string("model_name", "", "Model name.")
+flags.DEFINE_integer("max_length", 1024, "Max length of sequences.", lower_bound=1)
+flags.DEFINE_float("learning_rate", 0.1, "Adam learning rate.", lower_bound=0.0)
 flags.DEFINE_integer("batch_size", 32, "Batch size.", lower_bound=0)
 flags.DEFINE_integer("epochs", 1, "Number of epochs.", lower_bound=1)
 flags.DEFINE_integer("seed", 0, "Random seed.")
+flags.DEFINE_integer("embed_dim", 768, "Model dimension.", lower_bound=1)
+flags.DEFINE_integer("num_layers", 12, "Number of transformer layers.", lower_bound=0)
+flags.DEFINE_integer("num_heads", 12, "Number of parallel heads.", lower_bound=1)
 
 
 dataset_library = {
@@ -60,9 +64,7 @@ def prepare_dataset(
     )
 
 
-def build_unigram_model(*, tokenizer: GPT2TokenizerFast) -> hk.Transformed:
-    vocab_size = tokenizer.vocab_size
-
+def build_unigram_model(*, vocab_size: int) -> hk.Transformed:
     @hk.transform
     def unigram_model(x: jax.Array) -> Dict[str, jax.Array]:
         b = hk.get_parameter(
@@ -74,27 +76,62 @@ def build_unigram_model(*, tokenizer: GPT2TokenizerFast) -> hk.Transformed:
     return unigram_model
 
 
-_model_registry = {"unigram": build_unigram_model}
+def build_transformer(*, vocab_size: int) -> hk.Transformed:
+    return transformer.build_causal_transformer(
+        vocab_size=vocab_size,
+        context_size=FLAGS.max_length,
+        embed_dim=FLAGS.embed_dim,
+        num_layers=FLAGS.num_layers,
+        num_heads=FLAGS.num_heads,
+    )
 
 
-def prepare_model(name: str, **kwargs: Any) -> hk.Transformed:
+class ModelBuilder(Protocol):
+    def __call__(self, *, vocab_size: int) -> hk.Transformed:
+        ...
+
+
+_model_registry: Dict[str, ModelBuilder] = {
+    "unigram": build_unigram_model,
+    "transformer": build_transformer,
+}
+
+
+def prepare_model(name: str, *, vocab_size: int) -> hk.Transformed:
     try:
         model_builder = _model_registry[name]
     except KeyError:
         raise KeyError(f"Unknown model: {name}") from None
-    return model_builder(**kwargs)
+    return model_builder(vocab_size=vocab_size)
+
+
+flags.register_validator(
+    "model_name",
+    lambda s: s in _model_registry.keys(),
+    f"Model name unrecognised, should be one of {list(_model_registry)}.",
+)
 
 
 def main(argv: List[str]) -> None:
-    tokenizer = prepare_tokenizer()
-    dds = prepare_dataset("wikitext-2", tokenizer, FLAGS.max_length)
-    model = prepare_model("unigram", tokenizer=tokenizer)
-    optimizer = optax.adam(FLAGS.learning_rate)
+    tokenizer: GPT2TokenizerFast = prepare_tokenizer()
+    dds: DatasetDict = prepare_dataset("wikitext-2", tokenizer, FLAGS.max_length)
+    model = prepare_model(FLAGS.model_name, vocab_size=tokenizer.vocab_size)
+    optimizer: optax.GradientTransformation = optax.adam(FLAGS.learning_rate)
 
     key = jax.random.PRNGKey(FLAGS.seed)
     key, init_key, train_key = jax.random.split(key, 3)
     params = model.init(init_key, jnp.zeros((1, 1), dtype=jnp.int32))
     opt_state = optimizer.init(params)
+
+    print("Model parameter summary")
+    print("=======================")
+    module_to_shapes_dict = jax.tree_util.tree_map(lambda l: l.shape, params)
+    for module, shapes_dict in module_to_shapes_dict.items():
+        print(f"{module}: {shapes_dict}")
+    print()
+    num_params = jax.tree_util.tree_reduce(lambda c, l: jnp.size(l), params, 0)
+    print(f"Total parameters: {num_params:,d}")
+    print()
 
     causal_lm.train(
         params,
