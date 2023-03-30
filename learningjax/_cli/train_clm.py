@@ -123,6 +123,10 @@ def main(argv: List[str]) -> None:
     params = model.init(init_key, jnp.zeros((1, 1), dtype=jnp.int32))
     opt_state = optimizer.init(params)
 
+    print()
+    print("Available devices", *jax.local_devices(), sep="\n  ")
+    print()
+
     print("Model parameter summary")
     print("=======================")
     module_to_shapes_dict = jax.tree_util.tree_map(lambda l: l.shape, params)
